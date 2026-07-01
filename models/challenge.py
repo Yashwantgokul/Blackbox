@@ -146,10 +146,10 @@ class Challenge(db.Model):
                 expected_flag = cache_service.get(cache_key)
                 
                 if expected_flag:
+                    case_sens = getattr(self, 'flag_case_sensitive', True)
                     flag_matched = verify_hmac_flag(submitted_flag, self.id, team_id, user_id)
                     if not flag_matched:
                         # Fallback: plain equality for flags generated before HMAC system
-                        case_sens = getattr(self, 'flag_case_sensitive', True)
                         flag_matched = (submitted_flag == expected_flag)
                         if not flag_matched and not case_sens:
                             flag_matched = (submitted_flag.lower() == expected_flag.lower())
