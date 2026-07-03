@@ -106,7 +106,7 @@ def reconcile_containers(app):
                     # Check if expired
                     if db_container.expires_at and datetime.utcnow() > db_container.expires_at:
                         if db_container.status in ['starting', 'running']:
-                            logger.info(f"Container {db_container.container_name} has expired, stopping")
+                            app.logger.info(f"Container {db_container.container_name} has expired, stopping", extra={"event": "container_expired", "container_name": db_container.container_name, "user_id": db_container.user_id, "challenge_id": db_container.challenge_id})
                             try:
                                 if docker_status == 'running':
                                     docker_container.stop(timeout=10)

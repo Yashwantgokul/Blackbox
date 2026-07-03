@@ -440,6 +440,7 @@ def submit_flag(challenge_id):
     
     # If already solved and challenge has no branching, reject submission
     if already_solved and not has_branching:
+        current_app.logger.info("Duplicate flag submission", extra={"event": "flag_duplicate", "user_id": current_user.id, "team_id": team_id, "challenge_id": challenge_id, "ip": request.remote_addr})
         return jsonify({'success': False, 'message': 'This challenge has already been solved'}), 400
     
     # Check max attempts limit (0 means unlimited)
@@ -627,17 +628,20 @@ def submit_flag(challenge_id):
                 if severity == 'critical':
                     current_app.logger.error(
                         f"FLAG SHARING - CRITICAL PATTERN: User {current_user.id} (team {team_id}) "
-                        f"submitted flag for challenge {challenge_id} belonging to {owner_label}. {pattern_notes}"
+                        f"submitted flag for challenge {challenge_id} belonging to {owner_label}. {pattern_notes}",
+                        extra={"event": "flag_abuse_detected", "severity": severity, "user_id": current_user.id, "team_id": team_id, "challenge_id": challenge_id, "claimed_owner_team_id": actual_owner_team_id, "ip": request.remote_addr}
                     )
                 elif severity == 'suspicious':
                     current_app.logger.warning(
                         f"FLAG SHARING - SUSPICIOUS: User {current_user.id} (team {team_id}) "
-                        f"submitted flag for challenge {challenge_id} belonging to {owner_label}. {pattern_notes}"
+                        f"submitted flag for challenge {challenge_id} belonging to {owner_label}. {pattern_notes}",
+                        extra={"event": "flag_abuse_detected", "severity": severity, "user_id": current_user.id, "team_id": team_id, "challenge_id": challenge_id, "claimed_owner_team_id": actual_owner_team_id, "ip": request.remote_addr}
                     )
                 else:
                     current_app.logger.warning(
                         f"FLAG SHARING ATTEMPT: User {current_user.id} (team {team_id}) "
-                        f"submitted flag for challenge {challenge_id} that belongs to {owner_label}"
+                        f"submitted flag for challenge {challenge_id} that belongs to {owner_label}",
+                        extra={"event": "flag_abuse_detected", "severity": severity, "user_id": current_user.id, "team_id": team_id, "challenge_id": challenge_id, "claimed_owner_team_id": actual_owner_team_id, "ip": request.remote_addr}
                     )
     
     # Create submission record
@@ -657,6 +661,14 @@ def submit_flag(challenge_id):
         action='SUBMIT_FLAG', 
         details={'challenge_id': challenge_id, 'is_correct': is_correct}
     )
+    
+    current_app.logger.info("Flag submitted", extra={
+        "event": "flag_correct" if is_correct else "flag_incorrect",
+        "user_id": current_user.id,
+        "team_id": team_id,
+        "challenge_id": challenge_id,
+        "ip": request.remote_addr
+    })
     
     if is_correct:
         # DETECT exact regex-based flag sharing (admin-controlled per-challenge)

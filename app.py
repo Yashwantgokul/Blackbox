@@ -33,6 +33,10 @@ def create_app(config_name=None):
     app = Flask(__name__, static_folder=static_folder, static_url_path='/static')
     app.config.from_object(config[config_name])
     
+    # Setup structured JSON logger
+    from utils.logger import setup_logger
+    setup_logger(app)
+    
     # Set custom JSON provider
     app.json = DecimalJSONProvider(app)
     

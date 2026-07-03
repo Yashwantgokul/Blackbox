@@ -5,7 +5,7 @@ services:
     restart: unless-stopped  
     user: "1001:${DOCKER_GID:-999}"  
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
       - "30000-30100:30000-30100"  
     environment:
       - FLASK_ENV=development
@@ -56,10 +56,12 @@ services:
       - ./conf/nginx/50x.html:/usr/share/nginx/html/50x.html:ro
       - uploads:/var/uploads:ro
       - nginx_cache:/var/cache/nginx
+      - nginx_logs:/var/log/nginx
     depends_on:
       - blackbox
     networks:
       default:
+      observability:
 
   db:
     container_name: blackbox-db
@@ -143,6 +145,51 @@ services:
       cron && tail -f /var/backups/ctf/backup.log /var/backups/ctf/cron.log 2>/dev/null || sleep infinity
       "
 
+  loki:
+    image: grafana/loki:latest
+    container_name: blackbox-loki
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:3100:3100"
+    volumes:
+      - ./loki/config.yml:/etc/loki/local-config.yaml:ro
+      - loki_data:/loki
+    networks:
+      - observability
+    command: -config.file=/etc/loki/local-config.yaml
+
+  promtail:
+    image: grafana/promtail:latest
+    container_name: blackbox-promtail
+    restart: unless-stopped
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+      - logs:/var/log/blackbox:ro
+      - nginx_logs:/var/log/nginx:ro
+      - ./promtail/config.yml:/etc/promtail/config.yml:ro
+    networks:
+      - observability
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: blackbox-grafana
+    restart: unless-stopped
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning
+    networks:
+      - observability
+    depends_on:
+      - loki
+
 volumes:
   mysql_data:
     driver: local
@@ -154,13 +201,22 @@ volumes:
     driver: local
   nginx_cache:
     driver: local
+  nginx_logs:
+    driver: local
   backups:
+    driver: local
+  loki_data:
+    driver: local
+  grafana_data:
     driver: local
 
 networks:
   default:
     driver: bridge
   internal:
+    driver: bridge
+    internal: true
+  observability:
     driver: bridge
     internal: true
   challenge_network:

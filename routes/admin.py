@@ -257,6 +257,7 @@ def create_challenge():
         
         cache_service.invalidate_all_challenges()
         
+        current_app.logger.info("Challenge created", extra={"event": "challenge_created", "challenge_id": challenge.id, "admin_id": current_user.id, "ip": request.remote_addr})
         flash(f'Challenge "{challenge.name}" created successfully!', 'success')
         
         return redirect(url_for('admin.manage_challenges'))
@@ -510,6 +511,7 @@ def edit_challenge(challenge_id):
         cache_service.invalidate_challenge(challenge_id)
         cache_service.invalidate_all_challenges()
         
+        current_app.logger.info("Challenge updated", extra={"event": "challenge_updated", "challenge_id": challenge.id, "admin_id": current_user.id, "ip": request.remote_addr})
         flash(f'Challenge "{challenge.name}" updated successfully!', 'success')
         return redirect(url_for('admin.manage_challenges'))
     
@@ -633,6 +635,8 @@ def delete_challenge(challenge_id):
     cache_service.invalidate_challenge(challenge_id)
     cache_service.invalidate_all_challenges()
     cache_service.invalidate_scoreboard()
+    
+    current_app.logger.info("Challenge deleted", extra={"event": "challenge_deleted", "challenge_id": challenge_id, "admin_id": current_user.id, "ip": request.remote_addr})
     
     return jsonify({'success': True, 'message': 'Challenge deleted'})
 
@@ -767,6 +771,9 @@ def toggle_active(user_id):
     user.is_active = not user.is_active
     db.session.commit()
     
+    event_name = "user_unbanned" if user.is_active else "user_banned"
+    current_app.logger.info(f"User active status toggled", extra={"event": event_name, "user_id": user.id, "admin_id": current_user.id, "ip": request.remote_addr})
+    
     return jsonify({
         'success': True,
         'is_active': user.is_active,
@@ -837,6 +844,8 @@ def adjust_user_points(user_id):
     db.session.add(adjustment)
     db.session.commit()
     
+    current_app.logger.info("Manual point adjustment", extra={"event": "manual_point_adjustment", "user_id": user_id, "points": points_delta, "reason": reason, "admin_id": current_user.id, "ip": request.remote_addr})
+    
     cache_service.invalidate_scoreboard()
     if user.team_id:
         cache_service.invalidate_team(user.team_id)
@@ -876,6 +885,8 @@ def adjust_team_points(team_id):
     
     db.session.add(adjustment)
     db.session.commit()
+    
+    current_app.logger.info("Manual team point adjustment", extra={"event": "manual_point_adjustment", "team_id": team_id, "points": points_delta, "reason": reason, "admin_id": current_user.id, "ip": request.remote_addr})
     
     cache_service.invalidate_scoreboard()
     cache_service.invalidate_team(team_id)
@@ -1021,6 +1032,7 @@ def manage_notifications():
         except Exception as e:
             current_app.logger.exception('Failed to emit notification via websocket')
 
+        current_app.logger.info("Announcement created", extra={"event": "announcement_created", "notification_id": notif.id, "admin_id": current_user.id, "ip": request.remote_addr})
         flash('Notification sent to all connected users', 'success')
         return redirect(url_for('admin.manage_notifications'))
 

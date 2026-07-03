@@ -3,7 +3,7 @@ Container Management Routes
 Endpoints for starting, stopping, and managing challenge containers
 """
 
-from flask import Blueprint, request, jsonify, render_template
+from flask import Blueprint, request, jsonify, render_template, current_app
 from flask_login import login_required, current_user
 from models import db
 from models.container import ContainerInstance, ContainerEvent
@@ -38,11 +38,14 @@ def start_container():
         )
         
         if result['success']:
+            current_app.logger.info("Challenge started", extra={"event": "challenge_started", "challenge_id": challenge_id, "user_id": current_user.id, "team_id": team_id, "ip": request.remote_addr})
             return jsonify(result), 200
         else:
+            current_app.logger.warning("Challenge start failed", extra={"event": "challenge_start_failed", "challenge_id": challenge_id, "user_id": current_user.id, "error": result.get('error')})
             return jsonify(result), 400
     
     except Exception as e:
+        current_app.logger.error("Error starting container", extra={"event": "error", "error_details": str(e)})
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
@@ -66,11 +69,14 @@ def stop_container():
         )
         
         if result['success']:
+            current_app.logger.info("Challenge stopped", extra={"event": "challenge_stopped", "challenge_id": challenge_id, "user_id": current_user.id})
             return jsonify(result), 200
         else:
+            current_app.logger.warning("Challenge stop failed", extra={"event": "challenge_stop_failed", "challenge_id": challenge_id, "user_id": current_user.id, "error": result.get('error')})
             return jsonify(result), 400
     
     except Exception as e:
+        current_app.logger.error("Error stopping container", extra={"event": "error", "error_details": str(e)})
         return jsonify({
             'success': False,
             'error': f'Server error: {str(e)}'
@@ -233,6 +239,8 @@ def force_cleanup():
                 errors.append(f"Container {container.id}: {str(e)}")
         
         db.session.commit()
+        
+        current_app.logger.info("Force cleanup triggered", extra={"event": "force_cleanup_triggered", "user_id": current_user.id, "cleaned_count": cleaned_count})
         
         if cleaned_count > 0:
             return jsonify({

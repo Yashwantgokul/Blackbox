@@ -45,6 +45,7 @@ def login():
             db.session.commit()
             
             log_audit_event(user_id=user.id, team_id=user.team_id, action='LOGIN_SUCCESS')
+            current_app.logger.info("Login successful", extra={"event": "login_success", "user_id": user.id, "team_id": user.team_id, "ip": request.remote_addr})
             
             next_page = request.args.get('next')
             if next_page:
@@ -57,6 +58,7 @@ def login():
                 return redirect(url_for('challenges.list_challenges'))
         else:
             log_audit_event(action='LOGIN_FAILED', details={'username': username})
+            current_app.logger.warning("Login failed", extra={"event": "login_failed", "ip": request.remote_addr})
             flash('Invalid username or password', 'error')
     
     return render_template('login.html')
@@ -157,12 +159,13 @@ def register():
                 gevent.spawn(send_email_async, app, user.email, 'Verify your email address', html)
                 flash('Registration successful! A verification email has been sent to your address. Please verify before logging in.', 'success')
             except Exception as e:
-                current_app.logger.error(f"Error preparing verification email: {e}")
+                current_app.logger.error("Error preparing verification email", extra={"event": "email_error", "error_details": str(e)})
                 flash('Registration successful, but there was an unexpected error preparing the email system.', 'warning')
         else:
             flash('Registration successful! Please login.', 'success')
         
         log_audit_event(user_id=user.id, action='REGISTER')
+        current_app.logger.info("Registration successful", extra={"event": "registration", "user_id": user.id, "ip": request.remote_addr})
         
         # Clear any stale session cookies. This prevents an issue where testing with 
         # database resets causes old session cookies to instantly log the user in 
@@ -182,6 +185,7 @@ def logout():
     _team_id = current_user.team_id
     logout_user()
     log_audit_event(user_id=_user_id, team_id=_team_id, action='LOGOUT')
+    current_app.logger.info("Logout successful", extra={"event": "logout", "user_id": _user_id, "team_id": _team_id, "ip": request.remote_addr})
     flash('You have been logged out', 'info')
     return redirect(url_for('index'))
 
@@ -267,6 +271,7 @@ def forgot_password():
             from utils.email import send_email_async
             app = current_app._get_current_object()
             gevent.spawn(send_email_async, app, user.email, 'Password Reset Request', html)
+            current_app.logger.info("Password reset requested", extra={"event": "password_reset_requested", "user_id": user.id, "ip": request.remote_addr})
         
         flash('If an account exists with that email, a password reset link has been sent.', 'info')
         return redirect(url_for('auth.login'))
@@ -301,6 +306,7 @@ def reset_password(token):
             user.set_password(password)
             db.session.commit()
             log_audit_event(user_id=user.id, action='PASSWORD_RESET')
+            current_app.logger.info("Password reset completed", extra={"event": "password_reset_completed", "user_id": user.id, "ip": request.remote_addr})
             flash('Your password has been updated! You can now login.', 'success')
             return redirect(url_for('auth.login'))
             
