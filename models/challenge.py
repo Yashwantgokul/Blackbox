@@ -144,9 +144,9 @@ class Challenge(db.Model):
             if team_part:
                 cache_key = f"dynamic_flag_mapping:{self.id}:{team_part}"
                 expected_flag = cache_service.get(cache_key)
-                case_sens = getattr(self, 'flag_case_sensitive', True)
-
+                
                 if expected_flag:
+                    case_sens = getattr(self, 'flag_case_sensitive', True)
                     flag_matched = verify_hmac_flag(submitted_flag, self.id, team_id, user_id)
                     if not flag_matched:
                         # Fallback: plain equality for flags generated before HMAC system
