@@ -822,7 +822,9 @@ def submit_flag(challenge_id):
         except Exception as e:
             current_app.logger.debug(f"Regex-sharing detection error: {e}")
         # Calculate points at time of solve
-        points = challenge.get_current_points()
+        from services.scoring import ScoringService
+        current_solve_count = challenge.get_solves_count()
+        points = ScoringService.calculate_dynamic_points(challenge, solve_count=current_solve_count)
         
         # Check if flag has a points override
         if hasattr(matched_flag, 'points_override') and matched_flag.points_override:
