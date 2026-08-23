@@ -34,7 +34,7 @@ class Team(db.Model):
         For static challenges: Uses stored points_earned
         """
         # Sum solve points (recalculated for dynamic challenges)
-        solve_points = sum([solve.get_current_points() for solve in self.solves])
+        solve_points = sum([solve.points_earned for solve in self.solves])
         
         # Subtract hint costs
         from models.hint import HintUnlock

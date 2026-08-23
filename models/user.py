@@ -55,7 +55,7 @@ class User(UserMixin, db.Model):
             return team.get_score() if team else 0
         else:
             # Sum solve points (recalculated for dynamic challenges)
-            solve_points = sum([solve.get_current_points() for solve in self.solves])
+            solve_points = sum([solve.points_earned for solve in self.solves])
             
             # Subtract hint costs
             from models.hint import HintUnlock

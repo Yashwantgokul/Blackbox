@@ -71,8 +71,11 @@ class Solve(db.Model):
         db.UniqueConstraint('team_id', 'challenge_id', name='unique_team_challenge'),
     )
     
-    def get_current_points(self):
+    def get_live_recalculated_points(self):
         """Get current point value for this solve
+        WARNING: This is only for previewing what the challenge is worth right now.
+        DO NOT use this to sum up user/team scores, as it will retroactively lower
+        scores for earlier solvers. Use `points_earned` for actual scoring.
         
         For dynamic challenges: Recalculate based on current challenge value
         For static challenges: Use stored points_earned
