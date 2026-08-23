@@ -24,10 +24,9 @@ class ScoringService:
             
         # Shift so decay begins AFTER the first solve
         solve_count -= 1
-        decay = max(1, challenge.decay_solves - 1)
         
         # If we've reached the decay threshold, return minimum
-        if solve_count >= decay:
+        if solve_count >= challenge.decay_solves:
             return challenge.minimum_points
         
         # Get decay function from Settings or config
@@ -40,6 +39,7 @@ class ScoringService:
         
         max_points = challenge.initial_points
         min_points = challenge.minimum_points
+        decay = challenge.decay_solves
         
         if decay_function == 'parabolic':
             # Parabolic decay (CTFd-style)
